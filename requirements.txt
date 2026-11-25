@@ -1,0 +1,29 @@
+# Core (pipeline + tests run on just these)
+networkx>=3.1
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.3
+joblib
+
+# Recommended
+xgboost>=2.0          # used automatically if installed, else sklearn HistGradientBoosting
+gensim>=4.3           # real Node2Vec skip-gram; else a PPMI-SVD fallback is used
+neo4j>=5.0            # graph database driver
+
+# Serving + UI
+fastapi>=0.110
+uvicorn[standard]
+pydantic>=2
+streamlit>=1.30
+
+# Optional (heavier): uncomment if you want them
+# torch
+# torch_geometric       # GraphSAGE (src/fraudgraph/analytics/graphsage.py)
+# python-igraph
+# leidenalg             # Leiden community detection (--method leiden)
+
+# Dev
+pytest
+httpx
+ruff

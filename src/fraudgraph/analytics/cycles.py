@@ -20,3 +20,21 @@ def _retention(amounts: list[float]) -> float:
         worst = min(amounts[(s + i + 1) % n] / amounts[(s + i) % n] for i in range(n - 1))
         best = max(best, worst)
     return min(1.0, best)
+
+
+def _time_feasible(first: list[int], last: list[int]) -> bool:
+    """Could one unit of money travel hop 0 -> 1 -> ... in time order, for some choice of starting hop?
+    Each hop is only known as a [first_ts, last_ts] window, so we greedily track the earliest feasible time."""
+    n = len(first)
+    for s in range(n):
+        cur = first[s]
+        ok = True
+        for i in range(1, n):
+            h = (s + i) % n
+            if last[h] < cur:
+                ok = False
+                break
+            cur = max(cur, first[h])
+        if ok:
+            return True
+    return False

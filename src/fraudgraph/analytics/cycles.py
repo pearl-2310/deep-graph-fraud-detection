@@ -10,6 +10,8 @@ Three complementary detectors on the account->account money-flow graph:
 """
 from __future__ import annotations
 
+import networkx as nx
+
 
 def _retention(amounts: list[float]) -> float:
     """Worst hop-to-hop size ratio along the cycle, from the best possible starting hop (so the result
@@ -38,3 +40,38 @@ def _time_feasible(first: list[int], last: list[int]) -> bool:
         if ok:
             return True
     return False
+
+
+def find_cycles(d: nx.DiGraph, max_len: int = 8, min_retention: float = 0.6,
+                max_scc_size: int = 500) -> list[dict]:
+    """Bounded, time-feasible, value-retaining cycles.
+
+    * Only SCCs with 3..max_scc_size nodes are searched (cycle enumeration is exponential; for a
+      giant SCC run it on a community-restricted subgraph or use a streaming/GDS approach instead).
+    * `retention` = worst ratio of consecutive hop sizes along the cycle, from the best start hop (capped at 1).
+      Laundering loops pass on most of the money (retention close to 1); random reciprocal
+      payments between friends do not.
+    """
+    out, seen = [], set()
+    for comp in nx.strongly_connected_components(d):
+        if not (3 <= len(comp) <= max_scc_size):
+            continue
+        sub = d.subgraph(comp)
+        for cyc in nx.simple_cycles(sub, length_bound=max_len):
+            if len(cyc) < 3:
+                continue
+            key = frozenset(cyc)
+            if key in seen:
+                continue
+            hops = [(cyc[i], cyc[(i + 1) % len(cyc)]) for i in range(len(cyc))]
+            amounts = [sub[a][b]["weight"] / sub[a][b]["count"] for a, b in hops]
+            retention = _retention(amounts)
+            if retention < min_retention:
+                continue
+            if not _time_feasible([sub[a][b]["first_ts"] for a, b in hops],
+                                  [sub[a][b]["last_ts"] for a, b in hops]):
+                continue
+            seen.add(key)
+            out.append({"nodes": cyc, "length": len(cyc), "total_amount": float(sum(amounts)),
+                        "retention": float(retention)})
+    return out
